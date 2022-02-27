@@ -18,6 +18,26 @@ def parse_txt(filename):
     return data, labels
 
 
+def parse_csv(filename):
+    """
+    Parse the csv file and return a list of input data.
+    """
+    data = []
+    labels = []
+    with open(filename, 'r') as f:
+        for label in f.readline().strip().split(','):
+            labels.append(label)
+            data.append([])
+        for line in f:
+            line = line.strip().split(',')[:13]
+            for i, num in enumerate(line):
+                try:
+                    data[i].append(float(num))
+                except ValueError:
+                    data[i].append(1 if num == 'Abnormal' else 0)
+    return data[:-1], labels[:-1]
+
+
 def output_data(data, filename, labels, spliter):
     """
     Output the data into a file.
