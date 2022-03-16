@@ -6,54 +6,46 @@ def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 def logistic_loss(X, y, beta):
-    return -np.sum(y * X.transpose().dot(beta) + np.log(1 + np.exp(X.transpose().dot(beta))))
+    return -np.sum(y * X.transpose().dot(beta) - np.log(1 + np.exp(X.transpose().dot(beta))))
 
 def gradient(X, y, beta):
-    return X.dot(sigmoid(X.transpose().dot(beta)) - y)
+    return -X.dot(y - sigmoid(X.transpose().dot(beta)))
 
-def predict(X, beta):
-    original = sigmoid(X.transpose().dot(beta))
-    for i in range(len(original)):
-        if original[i] > 0.5:
-            original[i] = 1
-        else:
-            original[i] = 0
-    return original
+# Read the data from input file. Split it into 2 parts for training and testing.
+
+data = np.loadtxt('Dataset_spine.csv', delimiter=',', skiprows=1, comments='"',
+                  converters={6: lambda x: int(x != b'Abnormal'), 7: lambda x: 0})
+train_data, test_data = split_data(data, 0.8)
+
+# Retrieve the training data. Use gradient descent to train the model.
+
+features_train, target_train = train_data[:, :6].transpose(), train_data[:, 6]
+X_train = np.vstack((np.ones(features_train.shape[1]), features_train))
+y_train = np.array(target_train)
+
+beta = np.zeros(X_train.shape[0])
+beta_trace = gd_const_ss(lambda beta: gradient(X_train, y_train, beta), beta, 2e-6, trace=True)
+print(f'trained beta: {beta_trace[-1]}')
+
+# Retrieve the testing data. Use the trained model to predict the value of attributes.
+
+features_test, target_test = test_data[:, :6].transpose(), test_data[:, 6]
+X_test = np.vstack((np.ones(features_test.shape[1]), features_test))
+y_test = np.array(target_test)
 
 def accuracy(X, y, beta):
-    return 1 - np.sum(np.abs(predict(X, beta) - y)) / X.size
+    predicted = np.array([1 if x >= 0.5 else 0 for x in sigmoid(X.transpose().dot(beta))])
+    return np.sum(predicted == y) / len(predicted)
 
-# Read the data from import file. Split it into 2 parts for training and testing.
-
-data, labels = parse_csv("Dataset_spine.csv")
-train_data, test_data = split_data(data, 0.8, 0.2)
-output_data(train_data, "data/spine_training.csv", labels, ',')
-output_data(test_data, "data/spine_testing.csv", labels, ',')
-
-# Reteive the training data. Use gradient descent to train the model.
-
-cols_training, att_training = train_data[:12], train_data[12]
-X_training = np.array([[1.0] * len(cols_training[0])] + cols_training)
-y_training = np.array(att_training)
-
-beta = np.array([0.0] * 13)
-beta_trace = gd_const_ss(lambda beta: gradient(X_training, y_training, beta), beta, 2e-6, trace=True)
-print(f"trained beta: {beta_trace[-1]}")
-
-# Retrieve the testing data. Use the trained model to predict the attribute.
-
-cols_testing, att_testing = test_data[:12], test_data[12]
-X_testing = np.array([[1.0] * len(cols_testing[0])] + cols_testing)
-y_testing = np.array(att_testing)
-err = 1 - accuracy(X_testing, y_testing, beta_trace[-1])
-print(f"prediction error: {err}")
+acc = accuracy(X_test, y_test, beta_trace[-1])
+print(f'prediction accuracy: {acc}')
 
 # Plot changes in loss and accuracy.
 
-train_loss = list(map(lambda beta: logistic_loss(X_training, y_training, beta), beta_trace))
-test_loss = list(map(lambda beta: logistic_loss(X_testing, y_testing, beta), beta_trace))
-train_acc = list(map(lambda beta: accuracy(X_training, y_training, beta), beta_trace))
-test_acc = list(map(lambda beta: accuracy(X_testing, y_testing, beta), beta_trace))
+train_loss = [logistic_loss(X_train, y_train, beta) for beta in beta_trace]
+test_loss = [logistic_loss(X_test, y_test, beta) for beta in beta_trace]
+train_acc = [accuracy(X_train, y_train, beta) for beta in beta_trace]
+test_acc = [accuracy(X_test, y_test, beta) for beta in beta_trace]
 
 plt.plot(train_loss, label='train loss')
 plt.savefig('graph/train_loss.pdf')
