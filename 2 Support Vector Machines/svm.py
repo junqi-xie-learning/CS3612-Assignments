@@ -29,6 +29,29 @@ def test(svc):
     return np.sum(predicted == y_testing) / len(predicted)
 
 
+def analyze_linear(svc, features):
+    '''
+    Analyze the linear model.
+    '''
+    print('\nLinear model analysis:')
+    y = svc.support_vectors_
+    weight = svc.dual_coef_[0]
+
+    print(f'support vectors: {len(y)}')
+    print(f'positive samples: {np.sum(weight > 0)}')
+    print(f'negative samples: {np.sum(weight < 0)}')
+
+    print('\nTop 30 support vectors:')
+    indices = np.abs(weight).argsort()[::-1][:30]
+    images = np.load('X_train_sampled.npy')
+
+    for i in indices:
+        support_vector = y[i]
+        image_index = np.where((features == support_vector).all(1))[0][0]
+        print(f'{image_index}: {weight[i]}')
+        plt.imsave(f'support_vectors/{image_index}.png', images[image_index], cmap='gray')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # kernel: 'linear', 'rbf', 'poly'
@@ -39,3 +62,6 @@ if __name__ == '__main__':
     model, features = train(config.kernel)
     accuracy = test(model)
     print(f'prediction accuracy: {accuracy}')
+
+    if config.kernel == 'linear':
+        analyze_linear(model, features)
