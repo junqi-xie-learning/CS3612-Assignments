@@ -8,6 +8,7 @@ If you found any mistakes in the solutions, please create an issue or contact me
 ## Environment Setup
 
 * This repository was tested with Python 3.10, Windows 11.
+* PyTorch 1.11.0, `torchvision` 0.12.0 and `torchtext` 0.12.0 are required for Neural Network Projects.
 
 ## License
 
